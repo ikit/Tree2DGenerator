@@ -32,9 +32,10 @@ def dot_product(v,w):
 def determinant(v,w):
    return v[0]*w[1]-v[1]*w[0]
 def inner_angle(v,w):
-   cosx=dot_product(v,w)/(length(v)*length(w))
-   rad=acos(cosx) # in radians
-   return rad*180/pi # returns degrees
+    # print("\ninner_angle(",v, ", ", w, ")", end="")
+    cosx=dot_product(v,w)/(length(v)*length(w))
+    rad=acos(cosx) # in radians
+    return rad*180/pi # returns degrees
 def angle_clockwise(A, B):
     inner=inner_angle(A,B)
     det = determinant(A,B)
@@ -42,8 +43,8 @@ def angle_clockwise(A, B):
         return inner
     else: # if the det > 0 then A is immediately clockwise of B
         return 360-inner
-def angle(v):
-    return angle_clockwise(v, (1,0))
+def angle(vecteur):
+    return angle_clockwise(vecteur, (1,0))
     
 def rad2deg(angle):
     return angle * 180 / pi
@@ -52,16 +53,16 @@ def deg2rad(angle):
     return angle * pi / 180
 
 
-def s_v (s, v) :
-    return (v[0] * s, v[1] * s)
+def s_v (scalaire, vecteur) :
+    return (vecteur[0] * scalaire, vecteur[1] * scalaire)
 
 def rotate(angle, vecteur):
     cs = math.cos(angle)
     sn = math.sin(angle)
     return rotcs(cs, sn, vecteur[0], vecteur[1])
      
-def rotcs(c, s, x, y):
-    return ( (c*x) - (s * y), (s*x) + (c*y))
+def rotcs(cos, sin, x, y):
+    return ( (cos*x) - (sin * y), (sin*x) + (cos*y))
 
 
 
@@ -69,6 +70,7 @@ def rotcs(c, s, x, y):
 
 # génére l'embranchement n+1
 def gener_embrch(brch_n):
+    # print("\ngener_embrch start : ", brch_n, end="")
     nbr_embrchmt = random.randrange(embrchmt_min, embrchmt_max)
     demi_tropi   = tropisme / 2 # radian
     alpha_delta  = tropisme / nbr_embrchmt # radian
@@ -76,34 +78,34 @@ def gener_embrch(brch_n):
     vect_base    = rotate(-demi_tropi, brch_n)
     alpha_random = 1 + round( rad2deg(alpha_delta))  # en degre car random d'entier
 
-    def aux(i, res):
-        if i == nbr_embrchmt :
-            return res
+    result = []
+    for i in range(0, nbr_embrchmt):
         alpha_prim = meth_rand(alpha_random) # en radian
         alpha      = (i * alpha_delta) + alpha_prim
         vect_prim  = s_v(rap_brch, rotate(alpha, vect_base)) # on positionne la branche n+1 et on regle sa taille
         vect       = meth_brch(vect_prim) # /!\ on modifie le vect grace a la methode meth_brch
-        return aux(i+1, (list(vect), res))
-    
-    return aux(0, [])
+        result.append(vect)
+    # print("\ngener_embrch result : ", result, end="")
+    return result
 
 
 
 # genere l'arbre d'ordre n en utilisant gener_embrch_n+1
 def gener_squelette(ordre, sqlt):
     if ordre == 0:
-        return sqlt
-    embrchmt = gener_embrch (sqlt[0])
-    arbre = [gener_squelette(ordre-1, b) for b in embrchmt]
-    return sqlt.append(arbre)
+        return [sqlt]
+    embrchmt = gener_embrch (sqlt)
+    arbre = [b for lb in embrchmt for b in gener_squelette(ordre-1, lb) ]
+    return [sqlt] + arbre
 
 
 
 
 
-
-
-gener_squelette(2, [(0,1)])
+print( gener_squelette(0, (0,1)) )
+print( gener_squelette(1, (0,1)) )
+print( gener_squelette(2, (0,1)) )
+print( gener_squelette(3, (0,1)) )
 
 
 
