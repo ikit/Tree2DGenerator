@@ -63,6 +63,8 @@ def s_v (scalaire, vecteur) :
 
 def v_add(v1, v2):
     return (v1[0] + v2[0], v1[1] + v2[1])
+def v_minus(v1, v2):
+    return (v1[0] - v2[0], v1[1] - v2[1])
 
 def rotate(angle, vecteur):
     cs = math.cos(angle)
@@ -123,18 +125,40 @@ def gener_squelette(ordre, root):
 # convertit le sqelette pour tracer l'arbre en fil de fer
 def sqlt2coord_fdfer(squelette, point):
     if len(squelette) == 0: 
-        return []
-
+        return None
 
     point_suivant = v_add(point, squelette[0])
-        
-    res = [(point, point_suivant)]
-    for b in squelette[1]:
-        res += sqlt2coord_fdfer(b, point_suivant)
-    return res
+    return ((point, point_suivant), [sqlt2coord_fdfer(b, point_suivant) for b in squelette[1]])
 
 
-  
+
+# convertit le sqelette pour tracer l'arbre avec des quadrilateres /!\ necessite de le faire d'abord en fil de fer
+# utilise une constante pour le rapport entre les 2 bases
+rap_amincissement = 0.5
+
+def sqlt2coord_quad(sqlt_fdfer, demi_taille_base):
+    ligne = sqlt_fdfer[0]
+    mAB      = ligne[0]
+    mDC      = ligne[1]
+    Vdir     = (mDC[0] - mAB[0], mDC[1] - mAB[1]) # vecteur directeur de la branche
+    Vdir_p   = (Vdir[1] * -1, Vdir[0])            # vecteur perpendiculaire à Vdir ( /!\ même norme)
+    Vdir_u_p = s_v(1/length(Vdir_p), Vdir_p)       # vecteur unitaire perpend à Vdir
+
+    demi_AB = s_v(demi_taille_base, Vdir_u_p)
+    demi_taille_base_suivante = demi_taille_base * rap_amincissement
+    demi_DC = s_v(demi_taille_base_suivante, Vdir_u_p)
+    A = v_minus(mAB, demi_AB)
+    B = v_add(mAB, demi_AB)
+    C = v_add(mDC, demi_DC)
+    D = v_minus(mDC, demi_DC)
+
+
+    return ((A, B, C, D), [sqlt2coord_quad(s, demi_taille_base_suivante) for s in sqlt_fdfer[1]])
+
+
+
+
+
 pygame.init()
   
 # set up the window
@@ -166,15 +190,37 @@ DISPLAYSURF.fill(BLACK)
 #pixObj[388][288] = BLACK
 #del pixObj
 
+def draw_line(line):
+    pygame.draw.line(DISPLAYSURF, GREEN, line[0], line[1])
+def draw_quad(quad):
+    pygame.draw.polygon(DISPLAYSURF, WHITE, quad, 1)
+
+
+def draw_tree(skeleton, branch_meth, sheet_meth):
+    if len(skeleton) == 0 :
+        return
+    if branch_meth is not None:
+        branch_meth(skeleton[0])
+    if len(skeleton[1]) == 0 and sheet_meth is not None:
+        sheet_meth(skeleton[0])
+
+    for sqlt in skeleton[1]:
+        draw_tree(sqlt, branch_meth, sheet_meth)
 
 
 arbre = gener_squelette(4, (0,100))
-print(arbre)
+# print(arbre)
 segments = sqlt2coord_fdfer(arbre, (400, 400))
-print(segments)
+# print(segments)
+quads = sqlt2coord_quad(segments, 20)
+print(quads)
 
-for s in segments:
-    pygame.draw.line(DISPLAYSURF, WHITE, s[0], s[1])
+# Draw skeleton
+draw_tree(segments, draw_line, None)
+    
+# Draw quad
+draw_tree(quads, draw_quad, None)
+    
 
 # run the game loop
 while True:
