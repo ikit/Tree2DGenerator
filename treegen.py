@@ -152,7 +152,6 @@ def sqlt2coord_quad(sqlt_fdfer, demi_taille_base):
     C = v_add(mDC, demi_DC)
     D = v_minus(mDC, demi_DC)
 
-
     return ((A, B, C, D), [sqlt2coord_quad(s, demi_taille_base_suivante) for s in sqlt_fdfer[1]])
 
 
@@ -190,12 +189,54 @@ DISPLAYSURF.fill(BLACK)
 #pixObj[388][288] = BLACK
 #del pixObj
 
+
+# Methodes de dessins de l'arbres
+
+# Dessine en mode file de fer
 def draw_line(line):
     pygame.draw.line(DISPLAYSURF, GREEN, line[0], line[1])
+
+# Dessine polygone en mode file de fer
 def draw_quad(quad):
     pygame.draw.polygon(DISPLAYSURF, WHITE, quad, 1)
 
+# Fonction qui trace une branche avec:
+# trace_quad_seg   = nbr de quad par branche
+# trace_quad_delta = variabilité du positionement des quad les uns par rapports au autres (en %)
+# trace_quad_meth  = méthode pour dessiner les branches
+trace_quad_seg = 10
+trace_quad_delta = 20
+trace_quad_meth = draw_quad
+def draw_multi_quad(quad):
+    AD = v_minus(quad[3], quad[0])
+    BC = v_minus(quad[2], quad[1])
 
+    ADu = s_v(1/trace_quad_seg, AD)
+    BCu = s_v(1/trace_quad_seg, BC)
+    ADp = (-1 * ADu[1], ADu[0]) # vecteur perpendiculaire à ADu ( /!\ même norme)
+    BCp = (-1 * BCu[1], BCu[0]) # vecteur perpendiculaire à BCu ( /!\ même norme)
+
+    def recursive_draw(i, p1, p2):
+        if i <= 0 :
+            trace_quad_meth((p1, p2, quad[2], quad[3]))
+        else:
+            variation = (random.randrange(2 * trace_quad_delta) - trace_quad_delta) / 100.0
+            p3_prim = v_add(p2, BCu)
+            p4_prim = v_add(p1, ADu)
+            p3 = v_add(p3_prim, s_v(variation, BCp))
+            p4 = v_add(p4_prim, s_v(variation, ADp))
+            trace_quad_meth((p1, p2, p3, p4))
+            recursive_draw(i-1, p4, p3)
+
+    recursive_draw(trace_quad_seg, quad[0], quad[1])
+
+
+
+
+
+
+
+# Dessinbe l'arbre en appliquand les méthodes de dessin fournies
 def draw_tree(skeleton, branch_meth, sheet_meth):
     if len(skeleton) == 0 :
         return
@@ -219,7 +260,7 @@ print(quads)
 draw_tree(segments, draw_line, None)
     
 # Draw quad
-draw_tree(quads, draw_quad, None)
+draw_tree(quads, draw_multi_quad, None)
     
 
 # run the game loop
