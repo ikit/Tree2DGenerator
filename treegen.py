@@ -20,6 +20,21 @@ def meth_rand_aleat(a_rand):
 
 
 # les variables globales utilisées
+X_MAX = 800
+Y_MAX = 800
+
+tree_xmin = X_MAX
+tree_xmax = 0
+tree_ymin = Y_MAX
+tree_ymax = 0
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# PARAMETRISATION DE L'ARBRE
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+
+# taille de la première branche (en pixel)
+taille_branche_initiale = 100
+
 embrchmt_min = 2
 embrchmt_max = 3
 tropisme     = (2 * pi) / 3.0
@@ -29,7 +44,9 @@ meth_brch    = meth_brch_normal
 
 
 
-# tools
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# TOOLS
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 def length(v):
     return sqrt(v[0]**2+v[1]**2)
 def dot_product(v,w):
@@ -77,6 +94,9 @@ def rotcs(cos, sin, x, y):
 
 
 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# GENERATION DE L'ARBRE
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
 # génére l'embranchement n+1
 def gener_embrch(brch_n):
@@ -102,6 +122,7 @@ def gener_embrch(brch_n):
 
 # genere l'arbre d'ordre n en utilisant gener_embrch_n+1
 def gener_squelette(ordre, root):
+    # generation of the skeleton
     if ordre == 0:
         return (root, [])
     embrchmt = gener_embrch (root)
@@ -110,13 +131,16 @@ def gener_squelette(ordre, root):
     return (root, arbre)
 
 
-
-
-
-# print( gener_squelette(0, (0,1)) )
-# print( gener_squelette(1, (0,1)) )
-# print( gener_squelette(2, (0,1)) )
-# print( gener_squelette(3, (0,1)) )
+def update_tree_bounds(branch):
+    global tree_xmin, tree_xmax, tree_ymin, tree_ymax
+    if branch[0] < tree_xmin :
+        tree_xmin = branch[0]
+    if branch[0] > tree_xmax:
+        tree_xmax = branch[0]
+    if branch[1] < tree_ymin:
+        tree_ymin = branch[1]
+    if branch[1] > tree_ymax:
+        tree_ymax = branch[1]
 
 
 
@@ -127,7 +151,7 @@ def sqlt2coord_fdfer(squelette, point):
     if len(squelette) == 0: 
         return None
 
-    point_suivant = v_add(point, squelette[0])
+    point_suivant = v_minus(point, s_v(taille_branche_initiale, squelette[0]))
     return ((point, point_suivant), [sqlt2coord_fdfer(b, point_suivant) for b in squelette[1]])
 
 
@@ -157,40 +181,126 @@ def sqlt2coord_quad(sqlt_fdfer, demi_taille_base):
 
 
 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# METHODES POUR LE DESSIN
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+
+# draw gradient 
+def fill_gradient(surface, color, gradient, rect=None, vertical=True, forward=True):
+    """fill a surface with a gradient pattern
+    Parameters:
+    color    -> starting color
+    gradient -> final color
+    rect     -> area to fill; default is surface's rect
+    vertical -> True=vertical; False=horizontal
+    forward  -> True=forward; False=reverse
+    
+    Pygame recipe: http://www.pygame.org/wiki/GradientCode
+    """
+    if rect is None: rect = surface.get_rect()
+    x1,x2 = rect.left, rect.right
+    y1,y2 = rect.top, rect.bottom
+    if vertical: h = y2-y1
+    else:        h = x2-x1
+    if forward: a, b = color, gradient
+    else:       b, a = color, gradient
+    rate = (
+        float(b[0]-a[0])/h,
+        float(b[1]-a[1])/h,
+        float(b[2]-a[2])/h
+    )
+    fn_line = pygame.draw.line
+    if vertical:
+        for line in range(y1,y2):
+            color = (
+                min(max(a[0]+(rate[0]*(line-y1)),0),255),
+                min(max(a[1]+(rate[1]*(line-y1)),0),255),
+                min(max(a[2]+(rate[2]*(line-y1)),0),255)
+            )
+            fn_line(surface, color, (x1,line), (x2,line))
+    else:
+        for col in range(x1,x2):
+            color = (
+                min(max(a[0]+(rate[0]*(col-x1)),0),255),
+                min(max(a[1]+(rate[1]*(col-x1)),0),255),
+                min(max(a[2]+(rate[2]*(col-x1)),0),255)
+            )
+            fn_line(surface, color, (col,y1), (col,y2))
+
+
+# la montagne (aleatoire: méthode mid)
+#(define (getvar m)
+#  (let aux ((res 0) (n m))
+#    (if (= 0 n) 
+#        (- res (/ m 2))
+#        (aux (+ res (/ (random 1000) 1000.0)) (- n 1)))))
+
+
+def getvar(n):
+    return random.randrange(2 * n) - n;
+
+
+def milieu(p1, p2):
+    return ((p1[0]+p2[0])/2, (p1[1]+p2[1])/2)
+
+# Dessine montagne (par dicotomie + récursif)
+def gen_mountain(color, seg, delta, p1, p2):
+    pM_init = milieu(p1, p2)
+    pM = (pM_init[0], pM_init[1]+getvar(delta))
+
+    if seg == 0:
+        pygame.draw.polygon(DISPLAYSURF, color, [(p1[0], Y_MAX), (p2[0], Y_MAX), p2, p1])
+        pygame.draw.line(DISPLAYSURF, BLACK, p1, p2)
+    else:
+        gen_mountain(color, seg-1, delta, p1, pM)
+        gen_mountain(color, seg-1, delta, pM, p2)
+
+
+
 
 pygame.init()
   
 # set up the window
-DISPLAYSURF = pygame.display.set_mode((800, 800), 0, 32)
-pygame.display.set_caption('Drawing')
+
+
+DISPLAYSURF = pygame.display.set_mode((X_MAX, Y_MAX), 0, 32)
+pygame.display.set_caption('2D tree generator')
   
 # set up the colors
+# Bases
 BLACK = (  0,   0,   0)
 WHITE = (255, 255, 255)
 RED   = (255,   0,   0)
 GREEN = (  0, 255,   0)
 BLUE  = (  0,   0, 255)
+
+# les branches / troncs
+C_BRUN = (255, 200, 100)
+C_NOIR  = (0, 0, 0)
+C_BLANC = (255, 255, 255)
+# les sols
+C_NEIGE = (239, 249, 255)
+C_HERBE = (93, 186, 80)
+C_PAILLASSE = (158, 108, 49)
+# le ciel 
+C_CIEL_BEAU1 = (9, 90, 238)
+C_CIEL_BEAU2 = (192, 200, 255)
+C_CIEL_COUVERT1 = (158, 170, 198)
+C_CIEL_COUVERT2 = (163, 163, 163)
+
+# les feuilles
+C_PRINTEMP1 = (11, 220, 80)
+C_PRINTEMP2 = (94, 185, 124)
+C_ETE1 = (23, 135, 23)
+C_ETE2 = (9, 97, 9)
+C_AUTOMNE1 = (255, 238, 90)
+C_AUTOMNE2 = (255, 172, 90)
+C_AUTOMNE3 = (232, 77, 52)
+C_AUTOMNE4 = (148, 88, 17) # contour feuille
   
-# draw on the surface object
-DISPLAYSURF.fill(BLACK)
-#pygame.draw.polygon(DISPLAYSURF, GREEN, ((146, 0), (291, 106), (236, 277), (56, 277), (0, 106)))
-#pygame.draw.line(DISPLAYSURF, BLUE, (60, 60), (120, 60), 4)
-#pygame.draw.line(DISPLAYSURF, BLUE, (120, 60), (60, 120))
-#pygame.draw.line(DISPLAYSURF, BLUE, (60, 120), (120, 120), 4)
-#pygame.draw.circle(DISPLAYSURF, BLUE, (300, 50), 20, 0)
-#pygame.draw.ellipse(DISPLAYSURF, RED, (300, 200, 40, 80), 1)
-#pygame.draw.rect(DISPLAYSURF, RED, (200, 150, 100, 50))
-  
-#pixObj = pygame.PixelArray(DISPLAYSURF)
-#pixObj[380][280] = BLACK
-#pixObj[382][282] = BLACK
-#pixObj[384][284] = BLACK
-#pixObj[386][286] = BLACK
-#pixObj[388][288] = BLACK
-#del pixObj
 
 
-# Methodes de dessins de l'arbres
+
 
 # Dessine en mode file de fer
 def draw_line(line):
@@ -249,12 +359,28 @@ def draw_tree(skeleton, branch_meth, sheet_meth):
         draw_tree(sqlt, branch_meth, sheet_meth)
 
 
-arbre = gener_squelette(4, (0,100))
+
+
+
+
+
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# MAIN 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+
+arbre = gener_squelette(4, (0,1))
 # print(arbre)
-segments = sqlt2coord_fdfer(arbre, (400, 400))
+segments = sqlt2coord_fdfer(arbre, (400, 600))
 # print(segments)
 quads = sqlt2coord_quad(segments, 20)
-print(quads)
+print(tree_xmin, tree_xmax, tree_ymin, tree_ymax)
+
+
+# Draw decor
+fill_gradient(DISPLAYSURF, C_CIEL_BEAU1, C_CIEL_BEAU2)
+gen_mountain(C_HERBE, 5, 20, (0, Y_MAX/2), (X_MAX, Y_MAX/2))
 
 # Draw skeleton
 draw_tree(segments, draw_line, None)
