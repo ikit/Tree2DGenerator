@@ -35,18 +35,22 @@ tree_ymax = 0
 # taille de la première branche (en pixel)
 taille_branche_initiale = 100
 
-embrchmt_min = 2
-embrchmt_max = 3
+embrchmt_min = 1
+embrchmt_max = 4
 tropisme     = (2 * pi) / 3.0
 rap_brch     = 0.7
 meth_rand    = meth_rand_aleat
 meth_brch    = meth_brch_normal
 
+# lors du dessin quadrilatère des branche, le rapport de taille entre la base [AB] et le sommet [DC]
+rap_amincissement = 0.5
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 # TOOLS
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+def vect(p1, p2):
+    return (p2[0] - p1[0], p2[1]-p1[1])
 def length(v):
     return sqrt(v[0]**2+v[1]**2)
 def dot_product(v,w):
@@ -157,8 +161,7 @@ def sqlt2coord_fdfer(squelette, point):
 
 
 # convertit le sqelette pour tracer l'arbre avec des quadrilateres /!\ necessite de le faire d'abord en fil de fer
-# utilise une constante pour le rapport entre les 2 bases
-rap_amincissement = 0.5
+
 
 def sqlt2coord_quad(sqlt_fdfer, demi_taille_base):
     ligne = sqlt_fdfer[0]
@@ -237,6 +240,8 @@ def fill_gradient(surface, color, gradient, rect=None, vertical=True, forward=Tr
 
 
 def getvar(n):
+    if n <= 0 : 
+        return 0
     return random.randrange(2 * n) - n;
 
 
@@ -245,6 +250,8 @@ def milieu(p1, p2):
 
 # Dessine montagne (par dicotomie + récursif)
 def gen_mountain(color, seg, delta, p1, p2):
+
+
     pM_init = milieu(p1, p2)
     pM = (pM_init[0], pM_init[1]+getvar(delta))
 
@@ -252,8 +259,9 @@ def gen_mountain(color, seg, delta, p1, p2):
         pygame.draw.polygon(DISPLAYSURF, color, [(p1[0], Y_MAX), (p2[0], Y_MAX), p2, p1])
         pygame.draw.line(DISPLAYSURF, BLACK, p1, p2)
     else:
-        gen_mountain(color, seg-1, delta, p1, pM)
-        gen_mountain(color, seg-1, delta, pM, p2)
+        d = round(delta/2)
+        gen_mountain(color, seg-1, d, p1, pM)
+        gen_mountain(color, seg-1, d, pM, p2)
 
 
 
@@ -304,11 +312,17 @@ C_AUTOMNE4 = (148, 88, 17) # contour feuille
 
 # Dessine en mode file de fer
 def draw_line(line):
-    pygame.draw.line(DISPLAYSURF, GREEN, line[0], line[1])
+    pygame.draw.line(DISPLAYSURF, BLUE, line[0], line[1])
 
 # Dessine polygone en mode file de fer
 def draw_quad(quad):
     pygame.draw.polygon(DISPLAYSURF, WHITE, quad, 1)
+
+def draw_quad2(quad):
+    pygame.draw.polygon(DISPLAYSURF, C_BRUN, quad)
+    pygame.draw.line(DISPLAYSURF, C_NOIR, quad[0], quad[3])
+    pygame.draw.line(DISPLAYSURF, C_NOIR, quad[1], quad[2])
+
 
 # Fonction qui trace une branche avec:
 # trace_quad_seg   = nbr de quad par branche
@@ -316,7 +330,7 @@ def draw_quad(quad):
 # trace_quad_meth  = méthode pour dessiner les branches
 trace_quad_seg = 10
 trace_quad_delta = 20
-trace_quad_meth = draw_quad
+trace_quad_meth = draw_quad2
 def draw_multi_quad(quad):
     AD = v_minus(quad[3], quad[0])
     BC = v_minus(quad[2], quad[1])
@@ -325,6 +339,13 @@ def draw_multi_quad(quad):
     BCu = s_v(1/trace_quad_seg, BC)
     ADp = (-1 * ADu[1], ADu[0]) # vecteur perpendiculaire à ADu ( /!\ même norme)
     BCp = (-1 * BCu[1], BCu[0]) # vecteur perpendiculaire à BCu ( /!\ même norme)
+
+
+    A = quad[0]
+    B = quad[2]
+    M = milieu(A, B)
+    M = (round(M[0]), round(M[1]))
+    pygame.draw.circle(DISPLAYSURF, RED, M, round(length(vect(A,B))), 1)
 
     def recursive_draw(i, p1, p2):
         if i <= 0 :
@@ -344,12 +365,12 @@ def draw_multi_quad(quad):
 
 
 
-
-
 # Dessinbe l'arbre en appliquand les méthodes de dessin fournies
 def draw_tree(skeleton, branch_meth, sheet_meth):
     if len(skeleton) == 0 :
         return
+
+
     if branch_meth is not None:
         branch_meth(skeleton[0])
     if len(skeleton[1]) == 0 and sheet_meth is not None:
@@ -360,9 +381,27 @@ def draw_tree(skeleton, branch_meth, sheet_meth):
 
 
 
+ordre = 6
 
+def draw_sheet_t1(branch):
+    A = branch[0]
+    C = branch[2]
+    AB = vect(A, branch[1])
+    AD = vect(A, branch[3])
+    coeff = 0.1 * ordre
+    coeff2 = coeff + 1
+    Aprim = v_minus(v_minus(A, s_v(coeff, AD)), s_v(coeff, AB))
+    ABprim = s_v(coeff2, AB)
+    ADprim = s_v(coeff2, AD)
 
-
+    for i in range(0,20):
+        c1 = v_add(Aprim, s_v(random.randrange(0, 100)/100, ABprim))
+        c2 = v_add(c1,    s_v(random.randrange(0, 100)/100, ADprim))
+        r  = (50 + random.randrange(0, 100))/1000
+        #pygame.draw.circle(DISPLAYSURF, C_PRINTEMP2, (round(abs(c2[0])), round(abs(c2[1]))), 5, 0)
+        M = milieu(A, C)
+        M = (round(M[0]), round(M[1]))
+        pygame.draw.circle(DISPLAYSURF, RED, M, round(length(vect(A,C))), 1)
 
 
 
@@ -375,19 +414,21 @@ arbre = gener_squelette(4, (0,1))
 segments = sqlt2coord_fdfer(arbre, (400, 600))
 # print(segments)
 quads = sqlt2coord_quad(segments, 20)
-print(tree_xmin, tree_xmax, tree_ymin, tree_ymax)
 
 
 # Draw decor
 fill_gradient(DISPLAYSURF, C_CIEL_BEAU1, C_CIEL_BEAU2)
-gen_mountain(C_HERBE, 5, 20, (0, Y_MAX/2), (X_MAX, Y_MAX/2))
+
+y2 = Y_MAX/2
+y4 = Y_MAX/4
+gen_mountain(C_HERBE, 7, y4, (0, y2 + getvar(y4)), (X_MAX, y2 + getvar(y4)))
+
+    
+# Draw quad
+draw_tree(quads, draw_multi_quad, draw_sheet_t1)
 
 # Draw skeleton
 draw_tree(segments, draw_line, None)
-    
-# Draw quad
-draw_tree(quads, draw_multi_quad, None)
-    
 
 # run the game loop
 while True:
