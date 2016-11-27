@@ -33,9 +33,9 @@ tree_ymax = 0
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
 # taille de la première branche (en pixel)
-taille_branche_initiale = 100
+taille_branche_initiale = 150
 
-embrchmt_min = 1
+embrchmt_min = 2
 embrchmt_max = 4
 tropisme     = (2 * pi) / 3.0
 rap_brch     = 0.7
@@ -343,9 +343,9 @@ def draw_multi_quad(quad):
 
     A = quad[0]
     B = quad[2]
-    M = milieu(A, B)
-    M = (round(M[0]), round(M[1]))
-    pygame.draw.circle(DISPLAYSURF, RED, M, round(length(vect(A,B))), 1)
+    # M = milieu(A, B)
+    # M = (round(M[0]), round(M[1]))
+    # pygame.draw.circle(DISPLAYSURF, RED, M, round(length(vect(A,B))), 1)
 
     def recursive_draw(i, p1, p2):
         if i <= 0 :
@@ -401,7 +401,26 @@ def draw_sheet_t1(branch):
         #pygame.draw.circle(DISPLAYSURF, C_PRINTEMP2, (round(abs(c2[0])), round(abs(c2[1]))), 5, 0)
         M = milieu(A, C)
         M = (round(M[0]), round(M[1]))
-        pygame.draw.circle(DISPLAYSURF, RED, M, round(length(vect(A,C))), 1)
+        #pygame.draw.circle(DISPLAYSURF, RED, M, round(length(vect(A,C))), 1)
+
+
+def draw_backsheets(sqlt):
+    print(sqlt)
+    if len(sqlt) == 0:
+        return
+    A = sqlt[0]
+    B = sqlt[1]
+    M = milieu(A, B)
+    rm = round(length(vect(A,B))/2)
+
+    for i in range(0,25):
+        alpha = 2*pi*random.random()
+        r = random.randrange(0, rm)
+        c = (round(M[0] + r*math.cos(alpha)), round(M[1] + r*math.sin(alpha)))
+        pygame.draw.circle(DISPLAYSURF, C_PRINTEMP1, c, round(r))
+
+
+
 
 
 
@@ -423,7 +442,11 @@ y2 = Y_MAX/2
 y4 = Y_MAX/4
 gen_mountain(C_HERBE, 7, y4, (0, y2 + getvar(y4)), (X_MAX, y2 + getvar(y4)))
 
-    
+
+# Draw background sheets of the tree
+for sqlt in segments[1]:
+        draw_tree(sqlt, draw_backsheets, draw_backsheets)
+
 # Draw quad
 draw_tree(quads, draw_multi_quad, draw_sheet_t1)
 
