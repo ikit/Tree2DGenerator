@@ -242,7 +242,7 @@ def fill_gradient(surface, color, gradient, rect=None, vertical=True, forward=Tr
 def getvar(n):
     if n <= 0 : 
         return 0
-    return random.randrange(2 * n) - n;
+    return random.randrange(2 * n) - n
 
 
 def milieu(p1, p2):
